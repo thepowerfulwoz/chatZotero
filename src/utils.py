@@ -6,25 +6,33 @@ import shutil
 
 from pyzotero import zotero, zotero_errors
 
+import torch
+from transformers import pipeline
+
 from langchain.schema import Document
 from qdrant_client import QdrantClient
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Qdrant
 from langchain.embeddings import HuggingFaceEmbeddings
 import torch
+from typing import List
 
-LIBRARY_ID = 13561077
-LIBRARY_TYPE = 'user'
-API_KEY = 'EoIgL0JDHoLru84VrUDnS1la'
+
 
 
 def get_zotero(lib_id, lib_type, api_key):
     return zotero.Zotero(lib_id, lib_type, api_key)
 
 
-def get_articles(zot: zotero.Zotero):
+def get_articles(zot: zotero.Zotero, collection_name: str):
     collections = zot.collections()
-    class_articles = zot.collection_items(collections[0]['data']['key'])
+    class_articles = []
+    for collection in collections:
+        if collection['data']['name'] == collection_name:
+            class_articles = zot.collection_items(collections[0]['data']['key'])
+            break
+        else:
+            raise ValueError('Collection not found, please specify a different collection and try again.')
     articles = []
     for article in class_articles:
         if article['data']['itemType'] == 'attachment' and article['data']['contentType'] == 'application/pdf':
@@ -55,7 +63,7 @@ def articles_input(filename):
     return json.load(f)
 
 
-def jsonToDoc(articles: list[dict]):
+def jsonToDoc(articles: List[dict]):
     documents = []
     for article in articles:
         title = article['title']
@@ -66,7 +74,7 @@ def jsonToDoc(articles: list[dict]):
     return documents
 
 
-def chunkDocs(documents: list[Document], chunkSize=1000, chunkOverlap=200):
+def chunkDocs(documents: List[Document], chunkSize=1000, chunkOverlap=200):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunkSize, chunk_overlap=chunkOverlap)
     chunked_articles = text_splitter.split_documents(documents)
     return chunked_articles
@@ -89,7 +97,7 @@ def docsToQdrant(docs, remove_dir: bool, directory, embeddingModel):
     return qdrant
 
 
-def create_qdrant(directory, remove_dir: bool, filename=None, embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
+def create_qdrant(directory, remove_dir: bool = True, filename=None, embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
     if directory and not remove_dir:
         if os.path.isdir(directory):
             return loadQdrantFromDir(directory, embeddingModel)
@@ -106,3 +114,22 @@ def create_qdrant(directory, remove_dir: bool, filename=None, embeddingModel="se
     qdrant = docsToQdrant(chunked_docs, remove_dir, directory, embeddingModel)
 
     return qdrant
+
+
+def get_pipe():
+    pipe = pipeline("text-generation", model="HuggingFaceH4/zephyr-7b-beta", torch_dtype=torch.bfloat16, device_map="auto")
+    return pipe
+
+
+def generate(pipe, content, message = "You are a data scientist whose job is to answer questions based on the context you are given. If the answer is not in the context, say \"Answer not found\". If you answer the question correctly, you will get $500"):
+# We use the tokenizer's chat template to format each message - see https://huggingface.co/docs/transformers/main/en/chat_templating
+    messages = [
+    {
+        "role": "system",
+        "content": message,
+    },
+    {"role": "user", "content": content},
+    ]
+    prompt = pipe.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    outputs = pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
+    return (outputs[0]["generated_text"])
