@@ -1,0 +1,4 @@
+langchain==0.1.5
+pyzotero==1.5.18
+qdrant_client==1.7.2
+torch==2.2.0
