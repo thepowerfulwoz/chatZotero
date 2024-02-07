@@ -4,9 +4,9 @@ import config
 pull_articles = input("Do you want to pull articles (IF THIS IS THE FIRST TIME YOU ARE RUNNING IT, YOU MUST ANSWER YES)? (yes/no)")
 filename = input("What should the name of the output JSON file be. (include the .JSON extension)?")
 if pull_articles == "yes":
-    library_id = input("What is the library id?\n")
-    library_type = input("What is the library type?\n")
-    API_KEY = input("What is the API key?")
+    library_id = config.LIBRARY_ID
+    library_type = config.LIBRARY_TYPE
+    API_KEY = config.API_KEY
     zot = utils.get_zotero(library_id, library_type, API_KEY)
     found_collection = False
     collection_name = input("What is the name of the collection you want to pull from?\n")
