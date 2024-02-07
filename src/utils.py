@@ -12,8 +12,8 @@ from transformers import pipeline
 from langchain.schema import Document
 from qdrant_client import QdrantClient
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Qdrant
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Qdrant
+from langchain_community.embeddings import HuggingFaceEmbeddings
 import torch
 from typing import List
 
@@ -100,6 +100,7 @@ def docsToQdrant(docs, remove_dir: bool, directory, embeddingModel):
 def create_qdrant(directory, remove_dir: bool = True, filename=None, embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
     if directory and not remove_dir:
         if os.path.isdir(directory):
+            print("loading from existing qdrantDB")
             return loadQdrantFromDir(directory, embeddingModel)
     if filename is None:
         print("must specify filename on first run")
@@ -109,7 +110,9 @@ def create_qdrant(directory, remove_dir: bool = True, filename=None, embeddingMo
     # returns JSON object as
     # a dictionary
     data = json.load(f)
+    print("loaded data")
     documents = jsonToDoc(data)
+    print("chunkingDocs")
     chunked_docs = chunkDocs(documents)
     qdrant = docsToQdrant(chunked_docs, remove_dir, directory, embeddingModel)
 
@@ -117,7 +120,7 @@ def create_qdrant(directory, remove_dir: bool = True, filename=None, embeddingMo
 
 
 def get_pipe():
-    pipe = pipeline("text-generation", model="HuggingFaceH4/zephyr-7b-beta", torch_dtype=torch.bfloat16, device_map="auto")
+    pipe = pipeline("text-generation", model="TheBloke/zephyr-7B-beta-GPTQ", torch_dtype=torch.bfloat16, device_map="cuda:0")
     return pipe
 
 
@@ -131,5 +134,5 @@ def generate(pipe, content, message = "You are a data scientist whose job is to 
     {"role": "user", "content": content},
     ]
     prompt = pipe.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    outputs = pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
+    outputs = pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.5, top_k=50, top_p=0.95)
     return (outputs[0]["generated_text"])

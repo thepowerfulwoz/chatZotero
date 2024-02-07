@@ -1,5 +1,7 @@
-langchain==0.1.5
+langchain==0.1.4
+langchain_community==0.0.16
 pyzotero==1.5.18
 qdrant_client==1.7.2
 torch==2.2.0
 transformers==4.37.2
+accelerate==0.26.1
