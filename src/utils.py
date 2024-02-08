@@ -4,6 +4,7 @@ import os.path
 import json
 import shutil
 
+import transformers
 from pyzotero import zotero, zotero_errors
 
 import torch
@@ -20,7 +21,7 @@ from typing import List
 
 
 
-def get_zotero(lib_id, lib_type, api_key):
+def get_zotero(lib_id: int, lib_type: str, api_key: str):
     return zotero.Zotero(lib_id, lib_type, api_key)
 
 
@@ -58,7 +59,7 @@ def articles_output(articles: list, filename: str):
         json.dump(articles, final)
 
 
-def articles_input(filename):
+def articles_input(filename: str):
     f = open(filename)
     return json.load(f)
 
@@ -80,14 +81,14 @@ def chunkDocs(documents: List[Document], chunkSize=1000, chunkOverlap=200):
     return chunked_articles
 
 
-def loadQdrantFromDir(directory, embeddingModel):
+def loadQdrantFromDir(directory: str, embeddingModel: str):
     client = QdrantClient(path=directory, prefer_grpc=True)
     qdrant = Qdrant(client=client, collection_name="documents",
                     embeddings=HuggingFaceEmbeddings(model_name=embeddingModel))
     return qdrant
 
 
-def docsToQdrant(docs, remove_dir: bool, directory, embeddingModel):
+def docsToQdrant(docs, remove_dir: bool, directory, embeddingModel: str):
     if remove_dir and os.path.isdir(directory):
         shutil.rmtree(directory)
     embedddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name=embeddingModel)
@@ -97,7 +98,7 @@ def docsToQdrant(docs, remove_dir: bool, directory, embeddingModel):
     return qdrant
 
 
-def create_qdrant(directory, remove_dir: bool = True, filename=None, embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
+def create_qdrant(directory: str, remove_dir: bool = True, filename: str=None, embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
     if directory and not remove_dir:
         if os.path.isdir(directory):
             print("loading from existing qdrantDB")
@@ -118,14 +119,22 @@ def create_qdrant(directory, remove_dir: bool = True, filename=None, embeddingMo
 
     return qdrant
 
+def index_data(directory: str, remove_dir: bool = True, filename: str=None):
+    return create_qdrant(directory, remove_dir, filename)
+def promptQdrant(query: str, qdrant: Qdrant, k: int=3):
+    found_docs = qdrant.similarity_search_with_score(query=query, k=3, score_threshold=.01)
+    # print(found_docs)
+    content = ""
+    for doc in found_docs:
+        content += doc[0].metadata["title"] + ":\n\n" + doc[0].page_content + "\n\n\n\n"
+    return content
 
 def get_pipe():
     pipe = pipeline("text-generation", model="TheBloke/zephyr-7B-beta-GPTQ", torch_dtype=torch.bfloat16, device_map="cuda:0")
     return pipe
 
 
-def generate(pipe, content, message = "You are a data scientist whose job is to answer questions based on the context you are given. If the answer is not in the context, say \"Answer not found\". If you answer the question correctly, you will get $500"):
-# We use the tokenizer's chat template to format each message - see https://huggingface.co/docs/transformers/main/en/chat_templating
+def generate(pipe: transformers.Pipeline, content: str, message: str = "You are a data scientist whose job is to answer questions based on the context you are given. If the answer is not in the context, say \"Answer not found\". If you answer the question correctly, you will get $500"):
     messages = [
     {
         "role": "system",
