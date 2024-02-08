@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Zotero</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        input[type="submit"], .json-btn {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        input[type="submit"]:hover, .json-btn:hover {
+            background-color: #0056b3;
+        }
+        .json-container {
+            height: 300px;
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: vertical;
+            overflow-y: auto
+        }
+        .json-container pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        .json-textarea {
+            width: 100%;
+            height: 150px;
+            resize: vertical;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Zotero</h1>
+
+        <!-- Fetch Articles Form -->
+        <form id="fetch-articles-form">
+            <h2>Fetch Articles</h2>
+            <label for="lib-id">Library ID:</label>
+            <input type="number" id="lib-id" name="lib-id" required>
+            <label for="lib-type">Library Type:</label>
+            <input type="text" id="lib-type" name="lib-type" required>
+            <label for="api-key">API Key:</label>
+            <input type="text" id="api-key" name="api-key" required>
+            <label for="collection-name">Collection Name:</label>
+            <input type="text" id="collection-name" name="collection-name" required>
+            <input type="submit" value="Fetch Articles">
+            <button class="json-btn" type="button" id="fetch-articles-json-btn">View JSON Response</button>
+            <textarea class="json-textarea" id="fetch-articles-json-output" readonly style="display: none;"></textarea>
+        </form>
+        <div id="articles-output" class="json-container" style="display: none;"></div>
+
+        <!-- Create Qdrant Form -->
+        <form id="create-qdrant-form">
+            <h2>Create Qdrant</h2>
+            <label for="qdrant-url">Qdrant URL:</label>
+            <input type="text" id="qdrant-url" name="qdrant-url" required>
+            <label for="embedding-model">Embedding Model:</label>
+            <input type="text" id="embedding-model" name="embedding-model" value="sentence-transformers/all-MiniLM-L6-v2">
+            <input type="submit" value="Create Qdrant">
+            <button class="json-btn" type="button" id="create-qdrant-json-btn">View JSON Response</button>
+            <textarea class="json-textarea" id="create-qdrant-json-output" readonly style="display: none;"></textarea>
+        </form>
+        <div id="create-qdrant-output" class="json-container" style="display: none;"></div>
+
+        <!-- Prompt Qdrant Form -->
+        <form id="prompt-qdrant-form">
+            <h2>Prompt Qdrant</h2>
+            <label for="prompt-query">Query:</label>
+            <input type="text" id="prompt-query" name="prompt-query" required>
+            <label for="prompt-url">Qdrant URL:</label>
+            <input type="text" id="prompt-url" name="prompt-url" required>
+            <label for="prompt-embedding-model">Embedding Model:</label>
+            <input type="text" id="prompt-embedding-model" name="prompt-embedding-model" value="sentence-transformers/all-MiniLM-L6-v2">
+            <input type="submit" value="Prompt Qdrant">
+            <button class="json-btn" type="button" id="prompt-qdrant-json-btn">View JSON Response</button>
+            <textarea class="json-textarea" id="prompt-qdrant-json-output" readonly style="display: none;"></textarea>
+        </form>
+        <div id="prompt-qdrant-output" class="json-container" style="display: none;"></div>
+
+        <!-- Generate Text Form -->
+        <form id="generate-text-form">
+            <h2>Generate Text</h2>
+            <label for="generate-content">Content:</label>
+            <textarea id="generate-content" name="generate-content" rows="4" required></textarea>
+            <input type="submit" value="Generate Text">
+            <button class="json-btn" type="button" id="generate-text-json-btn">View JSON Response</button>
+            <textarea class="json-textarea" id="generate-text-json-output" readonly style="display: none;"></textarea>
+        </form>
+        <div id="generated-text-output" class="json-container" style="display: none;"></div>
+    </div>
+
+    <script>
+        const baseUrl = "http://127.0.0.1:8000"
+        const fetchArticlesForm = document.getElementById('fetch-articles-form');
+        const articlesOutput = document.getElementById('articles-output');
+        const articlesJsonOutput = document.getElementById('fetch-articles-json-output');
+        const createQdrantForm = document.getElementById('create-qdrant-form');
+        const createQdrantOutput = document.getElementById('create-qdrant-output');
+        const createQdrantJsonOutput = document.getElementById('create-qdrant-json-output');
+        const promptQdrantForm = document.getElementById('prompt-qdrant-form');
+        const promptQdrantOutput = document.getElementById('prompt-qdrant-output');
+        const promptQdrantJsonOutput = document.getElementById('prompt-qdrant-json-output');
+        const generateTextForm = document.getElementById('generate-text-form');
+        const generatedTextOutput = document.getElementById('generated-text-output');
+        const generatedTextJsonOutput = document.getElementById('generate-text-json-output');
+
+        // Function to handle displaying JSON response
+        const showJsonResponse = (outputElement, jsonOutputElement, responseData) => {
+            outputElement.style.display = 'block';
+            outputElement.innerHTML = '<h2>JSON Response</h2>';
+            outputElement.innerHTML += `<pre>${JSON.stringify(responseData, null, 2)}</pre>`;
+            jsonOutputElement.style.display = 'block';
+            jsonOutputElement.value = JSON.stringify(responseData, null, 2);
+        };
+
+        // Fetch Articles Form Submit Event Listener
+        fetchArticlesForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(fetchArticlesForm);
+            const requestData = {
+                "zotero_config":{
+                lib_id: formData.get('lib-id'),
+                lib_type: formData.get('lib-type'),
+                api_key: formData.get('api-key')},
+                "zotero_collection":{collection_name: formData.get('collection-name')}
+            };
+
+            const response = await fetch(baseUrl+'/zotero/articles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            showJsonResponse(articlesOutput, articlesJsonOutput, data);
+        });
+
+        // Create Qdrant Form Submit Event Listener
+        createQdrantForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(createQdrantForm);
+            const requestData = {
+                docs: [], // Add your documents here if needed
+                url: formData.get('qdrant-url'),
+                embeddingModel: formData.get('embedding-model')
+            };
+
+            const response = await fetch(baseUrl+'/qdrant/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            showJsonResponse(createQdrantOutput, createQdrantJsonOutput, data);
+        });
+
+        // Prompt Qdrant Form Submit Event Listener
+        promptQdrantForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(promptQdrantForm);
+            const requestData = {
+                query: formData.get('prompt-query'),
+                url: formData.get('prompt-url'),
+                embeddingModel: formData.get('prompt-embedding-model')
+            };
+
+            const response = await fetch(baseUrl+'/qdrant/prompt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            showJsonResponse(promptQdrantOutput, promptQdrantJsonOutput, data);
+        });
+
+        // Generate Text Form Submit Event Listener
+        generateTextForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(generateTextForm);
+            const requestData = {
+                content: formData.get('generate-content')
+            };
+
+            const response = await fetch(baseUrl+'/text/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+
+            showJsonResponse(generatedTextOutput, generatedTextJsonOutput, data);
+        });
+    </script>
+</body>
+</html>

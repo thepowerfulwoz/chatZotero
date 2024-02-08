@@ -7,7 +7,6 @@ import shutil
 import transformers
 from pyzotero import zotero, zotero_errors
 
-import torch
 from transformers import pipeline
 
 from langchain.schema import Document
@@ -17,8 +16,6 @@ from langchain_community.vectorstores import Qdrant
 from langchain_community.embeddings import HuggingFaceEmbeddings
 import torch
 from typing import List
-
-
 
 
 def get_zotero(lib_id: int, lib_type: str, api_key: str):
@@ -88,59 +85,50 @@ def loadQdrantFromDir(directory: str, embeddingModel: str):
     return qdrant
 
 
-def docsToQdrant(docs, remove_dir: bool, directory, embeddingModel: str):
-    if remove_dir and os.path.isdir(directory):
-        shutil.rmtree(directory)
-    embedddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name=embeddingModel)
+def docsToQdrant(docs, url, embeddingModel: str):
+    ###IF ADDING Back, add remove_dir parameter
+    # if remove_dir and os.path.isdir(directory):
+    #     shutil.rmtree(directory)
+    embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name=embeddingModel)
     qdrant = Qdrant.from_documents(
-        docs, embedddings, path=directory, collection_name='documents'
+        docs, embeddings, url=url, collection_name='documents'
     )
     return qdrant
 
 
-def create_qdrant(directory: str, remove_dir: bool = True, filename: str=None, embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
-    if directory and not remove_dir:
-        if os.path.isdir(directory):
-            print("loading from existing qdrantDB")
-            return loadQdrantFromDir(directory, embeddingModel)
-    if filename is None:
-        print("must specify filename on first run")
-        return None
-    f = open(filename)
-
-    # returns JSON object as
-    # a dictionary
-    data = json.load(f)
+def create_qdrant(docs, url: str = "localhost:6333",
+                  embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
     print("loaded data")
-    documents = jsonToDoc(data)
+    documents = jsonToDoc(articles=docs)
     print("chunkingDocs")
     chunked_docs = chunkDocs(documents)
-    qdrant = docsToQdrant(chunked_docs, remove_dir, directory, embeddingModel)
+    docsToQdrant(chunked_docs, url=url, embeddingModel=embeddingModel)
+    print("created qdrant")
 
-    return qdrant
 
-def index_data(directory: str, remove_dir: bool = True, filename: str=None):
-    return create_qdrant(directory, remove_dir, filename)
-def promptQdrant(query: str, qdrant: Qdrant, k: int=3):
-    found_docs = qdrant.similarity_search_with_score(query=query, k=3, score_threshold=.01)
+def promptQdrant(question: str, qdrant, k: int = 3):
+    found_docs = qdrant.similarity_search_with_score(query=question, k=k, score_threshold=.01)
     # print(found_docs)
     content = ""
     for doc in found_docs:
         content += doc[0].metadata["title"] + ":\n\n" + doc[0].page_content + "\n\n\n\n"
     return content
 
+
 def get_pipe():
-    pipe = pipeline("text-generation", model="TheBloke/zephyr-7B-beta-GPTQ", torch_dtype=torch.bfloat16, device_map="cuda:0")
+    pipe = pipeline("text-generation", model="TheBloke/zephyr-7B-beta-GPTQ", torch_dtype=torch.bfloat16,
+                    device_map="cuda:0")
     return pipe
 
 
-def generate(pipe: transformers.Pipeline, content: str, message: str = "You are a data scientist whose job is to answer questions based on the context you are given. If the answer is not in the context, say \"Answer not found\". If you answer the question correctly, you will get $500"):
+def generate(pipe: transformers.Pipeline, content: str,
+             message: str = "You are a data scientist whose job is to answer questions based on the context you are given. If the answer is not in the context, say \"Answer not found\". If you answer the question correctly, you will get $500"):
     messages = [
-    {
-        "role": "system",
-        "content": message,
-    },
-    {"role": "user", "content": content},
+        {
+            "role": "system",
+            "content": message,
+        },
+        {"role": "user", "content": content},
     ]
     prompt = pipe.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     outputs = pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.5, top_k=50, top_p=0.95)
