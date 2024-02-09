@@ -85,33 +85,34 @@ def loadQdrantFromDir(directory: str, embeddingModel: str):
     return qdrant
 
 
-def docsToQdrant(docs, url, embeddingModel: str):
+def docsToQdrant(docs, url, embeddingModel: str, collection_name: str):
     ###IF ADDING Back, add remove_dir parameter
     # if remove_dir and os.path.isdir(directory):
     #     shutil.rmtree(directory)
     embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name=embeddingModel)
     qdrant = Qdrant.from_documents(
-        docs, embeddings, url=url, collection_name='documents'
+        docs, embeddings, url=url, collection_name=collection_name
     )
     return qdrant
 
 
-def create_qdrant(docs, url: str = "localhost:6333",
+def create_qdrant(docs, collection_name, url: str = "localhost:6333",
                   embeddingModel="sentence-transformers/all-MiniLM-L6-v2"):
     print("loaded data")
     documents = jsonToDoc(articles=docs)
     print("chunkingDocs")
     chunked_docs = chunkDocs(documents)
-    docsToQdrant(chunked_docs, url=url, embeddingModel=embeddingModel)
+    docsToQdrant(chunked_docs, url=url, embeddingModel=embeddingModel, collection_name=collection_name)
     print("created qdrant")
+    return {"response": "Created Qdrant"}
 
 
 def promptQdrant(question: str, qdrant, k: int = 3):
     found_docs = qdrant.similarity_search_with_score(query=question, k=k, score_threshold=.01)
     # print(found_docs)
-    content = ""
+    content = []
     for doc in found_docs:
-        content += doc[0].metadata["title"] + ":\n\n" + doc[0].page_content + "\n\n\n\n"
+        content.append({"title": doc[0].metadata["title"], "body": doc[0].page_content, "score": doc[1]})
     return content
 
 

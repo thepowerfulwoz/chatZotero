@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import FileResponse
+from flask import render_template
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from pydantic import BaseModel
 from typing import List
@@ -35,12 +37,13 @@ class Articles(BaseModel):
     filename: str
 
 class QdrantCreate(BaseModel):
-    articles: List[dict]
+    collection_name: str
     url: str = 'localhost:6333'
     embeddingModel: str = "sentence-transformers/all-MiniLM-L6-v2"
 
 class QdrantQuery(BaseModel):
     query: str
+    collection: str
     url: str
     embeddingModel: str = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -51,6 +54,10 @@ class Content(BaseModel):
 
 # test
 # Routes
+@app.get("/")
+async def read_index():
+    return FileResponse('../interface/index.html')
+
 @app.post("/zotero/articles")
 def fetch_articles(zotero_config: ZoteroConfig, zotero_collection: ZoteroCollection):
     zot = get_zotero(zotero_config.lib_id, zotero_config.lib_type, zotero_config.api_key)
@@ -59,14 +66,15 @@ def fetch_articles(zotero_config: ZoteroConfig, zotero_collection: ZoteroCollect
 
 
 @app.post("/qdrant/create")
-def create_qdrant_endpoint(qdreantCreate: QdrantCreate):
-    return create_qdrant(qdreantCreate.articles, qdreantCreate.url, qdreantCreate.embeddingModel)
+def create_qdrant_endpoint(zotero_config: ZoteroConfig, zotero_collection: ZoteroCollection, qdrantCreate: QdrantCreate):
+    articles = fetch_articles(zotero_config, zotero_collection)
+    return create_qdrant(articles, qdrantCreate.collection_name, qdrantCreate.url, qdrantCreate.embeddingModel)
 
 
 @app.post("/qdrant/prompt")
 def prompt_qdrant(qdrant_query: QdrantQuery):
     client = QdrantClient(qdrant_query.url)
-    qdrant = Qdrant(client=client, collection_name='documents',
+    qdrant = Qdrant(client=client, collection_name=qdrant_query.collection,
                     embeddings=HuggingFaceEmbeddings(model_name=qdrant_query.embeddingModel))
     if qdrant:
         return promptQdrant(question=qdrant_query.query, qdrant=qdrant)
