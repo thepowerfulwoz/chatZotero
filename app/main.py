@@ -12,9 +12,8 @@ from functools import lru_cache
 from qdrant_client import QdrantClient
 from langchain_community.vectorstores import Qdrant
 
-from utils import get_zotero, get_articles, create_qdrant, promptQdrant, get_pipe, generate
-import config
-
+from utils.util import get_zotero, get_articles, create_qdrant, promptQdrant, get_pipe, generate
+from configs import config
 
 app = FastAPI()
 app.add_middleware(
@@ -26,6 +25,7 @@ app.add_middleware(
 )
 
 
+# test
 # Define request models
 class ZoteroConfig(BaseModel):
     lib_id: int
@@ -76,7 +76,8 @@ def fetch_articles(settings: Annotated[config.Settings, Depends(get_settings)], 
 
 
 @app.post("/qdrant/create")
-def create_qdrant_endpoint(settings: Annotated[config.Settings, Depends(get_settings)], zotero_collection: ZoteroCollection,
+def create_qdrant_endpoint(settings: Annotated[config.Settings, Depends(get_settings)],
+                           zotero_collection: ZoteroCollection,
                            qdrantCreate: QdrantCreate):
     articles = fetch_articles(settings, zotero_collection)
     return create_qdrant(articles, qdrantCreate.collection_name, settings.qdrant_url, qdrantCreate.embeddingModel)
