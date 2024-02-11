@@ -24,12 +24,14 @@ def get_zotero(lib_id: int, lib_type: str, api_key: str):
 
 def get_articles(zot: zotero.Zotero, collection_name: str):
     collections = zot.collections()
+    print(collections)
+    print("-"*10)
     class_articles = []
-    for collection in collections:
+    for x,collection in enumerate(collections):
         if collection['data']['name'] == collection_name:
-            class_articles = zot.collection_items(collections[0]['data']['key'])
+            class_articles = zot.collection_items(collections[x]['data']['key'])
             break
-        else:
+        if x == len(collections)-1:
             raise ValueError('Collection not found, please specify a different collection and try again.')
     articles = []
     for article in class_articles:

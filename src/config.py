@@ -1,3 +1,9 @@
-LIBRARY_ID = 1234567
-LIBRARY_TYPE = 'LIBRARY_TYPE'
-API_KEY = 'API_KEY'
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class Settings(BaseSettings):
+    api_key: str
+    library_type: str
+    library_id: str
+    qdrant_url: str
+
+    model_config = SettingsConfigDict(env_file="../.env")

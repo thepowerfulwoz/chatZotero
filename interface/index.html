@@ -22,24 +22,8 @@
                     <form id="create-qdrant-form">
                         <div class="accordion-body">
                             <div class="mb-3">
-                                <label for="lib-id" class="form-label">Library ID:</label>
-                                <input type="number" class="form-control" id="lib-id" name="lib-id" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="lib-type" class="form-label">Library Type:</label>
-                                <input type="text" class="form-control" id="lib-type" name="lib-type" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="api-key" class="form-label">API Key:</label>
-                                <input type="text" class="form-control" id="api-key" name="api-key" required>
-                            </div>
-                            <div class="mb-3">
                                 <label for="collection-name" class="form-label">Zotero Collection Name:</label>
                                 <input type="text" class="form-control" id="collection-name" name="collection-name" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="qdrant-url" class="form-label">Qdrant URL:</label>
-                                <input type="text" class="form-control" id="qdrant-url" name="qdrant-url" required>
                             </div>
                             <div class="mb-3">
                                 <label for="QdrantCollection-name" class="form-label">Qdrant Collection Name:</label>
@@ -51,7 +35,7 @@
                             </div>
                             <button type="submit" class="btn btn-primary">Create Qdrant</button>
                             <button class="btn btn-secondary json-btn" type="button" id="create-qdrant-json-btn">View JSON Response</button>
-                            <textarea class="form-control json-textarea" id="create-qdrant-json-output" readonly style="display: none;"></textarea>
+                            <textarea class="form-control json-textarea" id="create-qdrant-json-output" readonly style="display: none;" rows="5"></textarea>
                         </div>
                     </form>
                     <div id="create-qdrant-output" class="json-container mt-4" style="display: none;"></div>
@@ -79,16 +63,12 @@
                                 <input type="text" class="form-control" id="prompt-collection" name="prompt-collection" required>
                             </div>
                             <div class="mb-3">
-                                <label for="prompt-url" class="form-label">Qdrant URL:</label>
-                                <input type="text" class="form-control" id="prompt-url" name="prompt-url" required>
-                            </div>
-                            <div class="mb-3">
                                 <label for="prompt-embedding-model" class="form-label">Embedding Model:</label>
                                 <input type="text" class="form-control" id="prompt-embedding-model" name="prompt-embedding-model" value="sentence-transformers/all-MiniLM-L6-v2">
                             </div>
                             <button type="submit" class="btn btn-primary">Prompt Qdrant</button>
                             <button class="btn btn-secondary json-btn" type="button" id="prompt-qdrant-json-btn">View JSON Response</button>
-                            <textarea class="form-control json-textarea" id="prompt-qdrant-json-output" readonly style="display: none;"></textarea>
+                            <textarea class="form-control json-textarea" id="prompt-qdrant-json-output" readonly style="display: none;" rows="10"></textarea>
                         </div>
                     </form>
                     <div id="prompt-qdrant-output" class="json-container mt-4" style="display: none;"></div>
@@ -113,7 +93,7 @@
                             </div>
                             <button type="submit" class="btn btn-primary">Generate Text</button>
                             <button class="btn btn-secondary json-btn" type="button" id="generate-text-json-btn">View JSON Response</button>
-                            <textarea class="form-control json-textarea" id="generate-text-json-output" readonly style="display: none;"></textarea>
+                            <textarea class="form-control json-textarea" id="generate-text-json-output" readonly style="display: none;" rows="10"></textarea>
                         </div>
                     </form>
                     <div id="generated-text-output" class="json-container mt-4" style="display: none;"></div>
@@ -126,10 +106,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const baseUrl = "http://192.168.66.110:8000"
-        // const fetchArticlesForm = document.getElementById('fetch-articles-form');
-        // const articlesOutput = document.getElementById('articles-output');
-        // const articlesJsonOutput = document.getElementById('fetch-articles-json-output');
         const createQdrantForm = document.getElementById('create-qdrant-form');
         const createQdrantOutput = document.getElementById('create-qdrant-output');
         const createQdrantJsonOutput = document.getElementById('create-qdrant-json-output');
@@ -142,38 +118,9 @@
 
         // Function to handle displaying JSON response
         const showJsonResponse = (outputElement, jsonOutputElement, responseData) => {
-//            outputElement.style.display = 'block';
-//            outputElement.innerHTML = '<h2>JSON Response</h2>';
-//            outputElement.innerHTML += `<pre>${JSON.stringify(responseData, null, 2)}</pre>`;
             jsonOutputElement.style.display = 'block';
             jsonOutputElement.value = JSON.stringify(responseData, null, 2);
         };
-
-        // Fetch Articles Form Submit Event Listener
-        // fetchArticlesForm.addEventListener('submit', async (e) => {
-        //     e.preventDefault();
-        //
-        //     const formData = new FormData(fetchArticlesForm);
-        //     const requestData = {
-        //         "zotero_config":{
-        //         lib_id: formData.get('lib-id'),
-        //         lib_type: formData.get('lib-type'),
-        //         api_key: formData.get('api-key')},
-        //         "zotero_collection":{collection_name: formData.get('collection-name')}
-        //     };
-        //
-        //     const response = await fetch(baseUrl+'/zotero/articles', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json'
-        //         },
-        //         body: JSON.stringify(requestData)
-        //     });
-        //
-        //     const data = await response.json();
-        //
-        //     showJsonResponse(articlesOutput, articlesJsonOutput, data);
-        // });
 
         // Create Qdrant Form Submit Event Listener
         createQdrantForm.addEventListener('submit', async (e) => {
@@ -181,18 +128,12 @@
 
             const formData = new FormData(createQdrantForm);
             const requestData = {
-                "zotero_config":{
-                lib_id: formData.get('lib-id'),
-                lib_type: formData.get('lib-type'),
-                api_key: formData.get('api-key')},
                 "zotero_collection":{collection_name: formData.get('collection-name')},
-                // docs: [], // Add your documents here if needed
                 "qdrantCreate": {collection_name: formData.get('QdrantCollection-name'),
-                url: formData.get('qdrant-url'),
                 embeddingModel: formData.get('embedding-model')}
             };
 
-            const response = await fetch(baseUrl+'/qdrant/create', {
+            const response = await fetch('/qdrant/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -213,12 +154,11 @@
             const requestData = {
                 query: formData.get('prompt-query'),
                 collection: formData.get('prompt-collection'),
-                url: formData.get('prompt-url'),
 
                 embeddingModel: formData.get('prompt-embedding-model')
             };
 
-            const response = await fetch(baseUrl+'/qdrant/prompt', {
+            const response = await fetch('/qdrant/prompt', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -240,7 +180,7 @@
                 content: formData.get('generate-content')
             };
 
-            const response = await fetch(baseUrl+'/text/generate', {
+            const response = await fetch('/text/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
