@@ -6,10 +6,8 @@ This program allows you to chat with any of your zotero documents that have thei
 Run the command:
 ```git clone https://github.com/thepowerfulwoz/chatZotero.git```
 
-To install dependencies: ```pip install -r requirements.txt```
-
 ## Configuration
-After cloning the repo, you must edit the three values in the `config.py` file.
+After cloning the repo, you must create a `.env` file with the values `LIBRARY_ID` `LIBRARY_TYPE` `API_KEY` and `QDRANT_URL`.
 ### For personal libraries:
 The `LIBRARY_ID` can be found [here](https://www.zotero.org/settings/keys) if it is a personal library. 
 
@@ -19,7 +17,15 @@ For group libraries, the ID can be found by opening the group's page: https://ww
 
 The `LIBRARY_TYPE` is `group`.
 
+The `API_KEY` can also be created [here](https://www.zotero.org/settings/keys). 
+
 # Running The Program
-Navigate to the program directory and run the command ```python3 /src/main.py``` 
+The program runs in a docker container with docker compose. (If docker is not installed, install docker)
+
+After docker has been installed, navigate to the directory the repo was cloned into and run `docker compose up --build`
+
+The web app is at `{HOST_URL}:8000`.
+
+The dashboard of qdrant, if desired, is at `{HOST_URL}:6333/dashboard`
 
 

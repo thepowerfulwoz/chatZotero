@@ -1,20 +1,19 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.params import Depends
-from starlette.responses import FileResponse
+from fastapi.responses import FileResponse
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from pydantic import BaseModel
 from typing import List
-from typing_extensions import Annotated
-
-from functools import lru_cache
-
+from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from langchain_community.vectorstores import Qdrant
 
-from utils.util import get_zotero, get_articles, create_qdrant, promptQdrant, get_pipe, generate
-from configs import config
+from app.utils.util import (get_zotero, get_articles, create_qdrant, promptQdrant)
+#get_pipe, generate
 
+load_dotenv()
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -23,16 +22,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+qdrant_url = os.environ.get("QDRANT_URL")
+lib_id: str = os.environ.get('LIBRARY_ID')
+lib_type: str = os.environ.get('LIBRARY_TYPE')
+api_key: str = os.environ.get('API_KEY')
 
 
-# test
 # Define request models
-class ZoteroConfig(BaseModel):
-    lib_id: int
-    lib_type: str
-    api_key: str
-
-
 class ZoteroCollection(BaseModel):
     collection_name: str
 
@@ -57,35 +53,29 @@ class Content(BaseModel):
     content: str
 
 
-@lru_cache
-def get_settings():
-    return config.Settings()
-
-
 # Routes
 @app.get("/")
 async def read_index():
-    return FileResponse('../interface/index.html')
+    return FileResponse('app/interface/index.html')
 
 
 @app.post("/zotero/articles")
-def fetch_articles(settings: Annotated[config.Settings, Depends(get_settings)], zotero_collection: ZoteroCollection):
-    zot = get_zotero(int(settings.library_id), settings.library_type, settings.api_key)
+def fetch_articles(zotero_collection: ZoteroCollection):
+    zot = get_zotero(int(lib_id), lib_type, api_key)
     articles = get_articles(zot, zotero_collection.collection_name)
     return articles
 
 
 @app.post("/qdrant/create")
-def create_qdrant_endpoint(settings: Annotated[config.Settings, Depends(get_settings)],
-                           zotero_collection: ZoteroCollection,
+def create_qdrant_endpoint(zotero_collection: ZoteroCollection,
                            qdrantCreate: QdrantCreate):
-    articles = fetch_articles(settings, zotero_collection)
-    return create_qdrant(articles, qdrantCreate.collection_name, settings.qdrant_url, qdrantCreate.embeddingModel)
+    articles = fetch_articles(zotero_collection)
+    return create_qdrant(articles, qdrantCreate.collection_name, qdrant_url, qdrantCreate.embeddingModel)
 
 
 @app.post("/qdrant/prompt")
-def prompt_qdrant(settings: Annotated[config.Settings, Depends(get_settings)], qdrant_query: QdrantQuery):
-    client = QdrantClient(settings.qdrant_url)
+def prompt_qdrant(qdrant_query: QdrantQuery):
+    client = QdrantClient(qdrant_url)
     qdrant = Qdrant(client=client, collection_name=qdrant_query.collection,
                     embeddings=HuggingFaceEmbeddings(model_name=qdrant_query.embeddingModel))
     if qdrant:
@@ -94,7 +84,7 @@ def prompt_qdrant(settings: Annotated[config.Settings, Depends(get_settings)], q
         raise HTTPException(status_code=404, detail="Qdrant not initialized")
 
 
-@app.post("/text/generate")
-def generate_text(content: Content):
-    pipe = get_pipe()
-    return generate(pipe, content.content)
+# @app.post("/text/generate")
+# def generate_text(content: Content):
+#     pipe = get_pipe()
+#     return generate(pipe, content.content)
