@@ -36,20 +36,21 @@ def get_articles(zot: zotero.Zotero, collection_name: str):
     articles = []
     for article in class_articles:
         if article['data']['itemType'] == 'attachment' and article['data']['contentType'] == 'application/pdf':
-            article_title = zot.item(article['data']['parentItem'])['data']['title']
-            print(article['data']['filename'])
-            print(article['data']['key'])
-            print(article_title)
-            print('-' * 10)
-            try:
-                articles.append({
-                    'title': article_title,
-                    'body': zot.fulltext_item(article['data']['key'])['content']
-                })
-            except zotero_errors.ResourceNotFound:
-                print(f"Could not get text for: {article_title}")
-                print("-" * 10)
-                continue
+            if 'parentItem' in article['data'].keys():
+                article_title = zot.item(article['data']['parentItem'])['data']['title']
+                print(article['data']['filename'])
+                print(article['data']['key'])
+                print(article_title)
+                print('-' * 10)
+                try:
+                    articles.append({
+                        'title': article_title,
+                        'body': zot.fulltext_item(article['data']['key'])['content']
+                    })
+                except zotero_errors.ResourceNotFound:
+                    print(f"Could not get text for: {article_title}")
+                    print("-" * 10)
+                    continue
     return articles
 
 
