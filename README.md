@@ -24,7 +24,7 @@ The program runs in a docker container with docker compose. (If docker is not in
 
 After docker has been installed, navigate to the directory the repo was cloned into and run `docker compose up --build`
 
-The web app is at `{HOST_URL}:8000`.
+The web app is at `{HOST_URL}:8501`.
 
 The dashboard of qdrant, if desired, is at `{HOST_URL}:6333/dashboard`
 
