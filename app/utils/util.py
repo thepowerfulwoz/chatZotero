@@ -1,6 +1,3 @@
-import os
-import os.path
-
 import json
 import shutil
 
@@ -22,16 +19,32 @@ def get_zotero(lib_id: int, lib_type: str, api_key: str):
     return zotero.Zotero(lib_id, lib_type, api_key)
 
 
+def get_zotero_collection_names(zot: zotero.Zotero):
+    collections = zot.collections()
+    names = [collection["data"]["name"] for collection in collections]
+    return names
+
+
+def get_qdrant_collection_names(url: str = "http://qdrant:6333"):
+    client = QdrantClient(url=url)
+    collections_list = []
+    collections = client.get_collections()
+    print("COLLECTIONS: ", list(collections))
+    for c in list(collections)[0][1]:
+        collections_list.append(c.name)
+    return collections_list
+
+
 def get_articles(zot: zotero.Zotero, collection_name: str):
     collections = zot.collections()
     print(collections)
-    print("-"*10)
+    print("-" * 10)
     class_articles = []
-    for x,collection in enumerate(collections):
+    for x, collection in enumerate(collections):
         if collection['data']['name'] == collection_name:
             class_articles = zot.collection_items(collections[x]['data']['key'])
             break
-        if x == len(collections)-1:
+        if x == len(collections) - 1:
             raise ValueError('Collection not found, please specify a different collection and try again.')
     articles = []
     for article in class_articles:
@@ -81,11 +94,11 @@ def chunkDocs(documents: List[Document], chunkSize=1000, chunkOverlap=200):
     return chunked_articles
 
 
-def loadQdrantFromDir(directory: str, embeddingModel: str):
-    client = QdrantClient(path=directory, prefer_grpc=True)
-    qdrant = Qdrant(client=client, collection_name="documents",
-                    embeddings=HuggingFaceEmbeddings(model_name=embeddingModel))
-    return qdrant
+# def loadQdrantFromDir(directory: str, embeddingModel: str):
+#     client = QdrantClient(path=directory, prefer_grpc=True)
+#     qdrant = Qdrant(client=client, collection_name="documents",
+#                     embeddings=HuggingFaceEmbeddings(model_name=embeddingModel))
+#     return qdrant
 
 
 def docsToQdrant(docs, url, embeddingModel: str, collection_name: str):
@@ -118,8 +131,8 @@ def promptQdrant(question: str, qdrant, k: int = 3):
         content.append({"title": doc[0].metadata["title"], "body": doc[0].page_content, "score": doc[1]})
     return content
 
-#TODO
-#ADD TORCH BACK TO REQUIREMENTS WHEN IMPLEMENTING
+# TODO
+# ADD TORCH BACK TO REQUIREMENTS WHEN IMPLEMENTING
 
 # def get_pipe():
 #     pipe = pipeline("text-generation", model="TheBloke/zephyr-7B-beta-GPTQ", torch_dtype=torch.bfloat16,

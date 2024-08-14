@@ -10,8 +10,9 @@ from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from langchain_community.vectorstores import Qdrant
 
-from app.utils.util import (get_zotero, get_articles, create_qdrant, promptQdrant)
-#get_pipe, generate
+from app.utils.util import (get_zotero, get_articles, create_qdrant, promptQdrant, get_zotero_collection_names, get_qdrant_collection_names)
+
+# get_pipe, generate
 
 load_dotenv()
 app = FastAPI()
@@ -59,12 +60,23 @@ async def read_index():
     return FileResponse('app/interface/index.html')
 
 
+@app.post("/zotero/collection_names")
+def fetch_zotero_collection_names():
+    zot = get_zotero(int(lib_id), lib_type, api_key)
+    collection_names = get_zotero_collection_names(zot)
+    return collection_names
+
+
 @app.post("/zotero/articles")
 def fetch_articles(zotero_collection: ZoteroCollection):
     zot = get_zotero(int(lib_id), lib_type, api_key)
     articles = get_articles(zot, zotero_collection.collection_name)
     return articles
 
+@app.post("/qdrant/collection_names")
+def fetch_qdrant_collection_names():
+    collection_names = get_qdrant_collection_names()
+    return collection_names
 
 @app.post("/qdrant/create")
 def create_qdrant_endpoint(zotero_collection: ZoteroCollection,
@@ -82,7 +94,6 @@ def prompt_qdrant(qdrant_query: QdrantQuery):
         return promptQdrant(question=qdrant_query.query, qdrant=qdrant)
     else:
         raise HTTPException(status_code=404, detail="Qdrant not initialized")
-
 
 # @app.post("/text/generate")
 # def generate_text(content: Content):
