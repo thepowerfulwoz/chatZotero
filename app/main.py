@@ -1,3 +1,4 @@
+import json
 import os
 
 from fastapi import FastAPI, HTTPException
@@ -9,6 +10,7 @@ from typing import List
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from langchain_community.vectorstores import Qdrant
+import requests
 
 from app.utils.util import (get_zotero, get_articles, create_qdrant, promptQdrant, get_zotero_collection_names, get_qdrant_collection_names)
 
@@ -27,7 +29,7 @@ qdrant_url = os.environ.get("QDRANT_URL")
 lib_id: str = os.environ.get('LIBRARY_ID')
 lib_type: str = os.environ.get('LIBRARY_TYPE')
 api_key: str = os.environ.get('API_KEY')
-
+ollama_url: str = os.environ.get('OLLAMA_URL')
 
 # Define request models
 class ZoteroCollection(BaseModel):
@@ -49,9 +51,10 @@ class QdrantQuery(BaseModel):
     collection: str
     embeddingModel: str = "sentence-transformers/all-MiniLM-L6-v2"
 
+class LlmQuery(BaseModel):
+    search: QdrantQuery
+    model_name: str = "llama3.1"
 
-class Content(BaseModel):
-    content: str
 
 
 # Routes
@@ -95,7 +98,25 @@ def prompt_qdrant(qdrant_query: QdrantQuery):
     else:
         raise HTTPException(status_code=404, detail="Qdrant not initialized")
 
-# @app.post("/text/generate")
-# def generate_text(content: Content):
-#     pipe = get_pipe()
-#     return generate(pipe, content.content)
+@app.post("/llm/rag")
+def generate_text(llm_query: LlmQuery):
+    content=prompt_qdrant(qdrant_query=llm_query.search)
+    docs = []
+    for doc in content:
+        docs.append(doc["body"])
+    question = llm_query.search.query
+    prompt = f"""SOURCES:
+    {docs}
+    
+    QUESTION: 
+    {question}
+    """
+    data = {
+        "model": llm_query.model_name,
+        "prompt": prompt,
+        "system": "You are an assistant that answers a QUESTION based on give SOURCES. Only answer the question using the given sources. If the answer is not in the sources, respond with \"Answer Not Found In Sources\". If the answer is in the sources and you respond correctly you will receive $50.",
+        "stream": False,
+        "keep_alive": "-1m"
+    }
+    response = requests.post(url=ollama_url, json=data)
+    return response
