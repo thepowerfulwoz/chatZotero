@@ -1,0 +1,11 @@
+fastapi
+langchain
+langchain-qdrant==0.1.4
+langchain-huggingface
+pydantic
+pydantic_settings
+pyzotero==1.5.18
+qdrant_client
+sentence-transformers
+typing_extensions
+uvicorn[standard]

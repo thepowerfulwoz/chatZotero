@@ -9,8 +9,8 @@ from transformers import pipeline
 from langchain.schema import Document
 from qdrant_client import QdrantClient
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Qdrant
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_qdrant import QdrantVectorStore
 # import torch
 from typing import List
 
@@ -106,8 +106,8 @@ def docsToQdrant(docs, url, embeddingModel: str, collection_name: str):
     # if remove_dir and os.path.isdir(directory):
     #     shutil.rmtree(directory)
     embeddings: HuggingFaceEmbeddings = HuggingFaceEmbeddings(model_name=embeddingModel)
-    qdrant = Qdrant.from_documents(
-        docs, embeddings, url=url, collection_name=collection_name
+    qdrant = QdrantVectorStore.from_documents(
+        docs, embeddings, url=url, collection_name=collection_name, prefer_grpc=True
     )
     return qdrant
 
@@ -131,24 +131,3 @@ def promptQdrant(question: str, qdrant, k: int = 3):
         content.append({"title": doc[0].metadata["title"], "body": doc[0].page_content, "score": doc[1]})
     return content
 
-# TODO
-# ADD TORCH BACK TO REQUIREMENTS WHEN IMPLEMENTING
-
-# def get_pipe():
-#     pipe = pipeline("text-generation", model="TheBloke/zephyr-7B-beta-GPTQ", torch_dtype=torch.bfloat16,
-#                     device_map="cuda:0")
-#     return pipe
-
-
-# def generate(pipe: transformers.Pipeline, content: str,
-#              message: str = "You are a data scientist whose job is to answer questions based on the context you are given. If the answer is not in the context, say \"Answer not found\". If you answer the question correctly, you will get $500"):
-#     messages = [
-#         {
-#             "role": "system",
-#             "content": message,
-#         },
-#         {"role": "user", "content": content},
-#     ]
-#     prompt = pipe.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-#     outputs = pipe(prompt, max_new_tokens=256, do_sample=True, temperature=0.5, top_k=50, top_p=0.95)
-#     return (outputs[0]["generated_text"])
