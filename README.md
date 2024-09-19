@@ -7,7 +7,7 @@ Run the command:
 ```git clone https://github.com/thepowerfulwoz/chatZotero.git```
 
 ## Configuration
-After cloning the repo, you must create a `.env` file with the values `LIBRARY_ID` `LIBRARY_TYPE` `API_KEY`, `QDRANT_URL`, and `OLLAMA_URL` (if you want to use q&a feature) in the `/app` directory of the project.
+After cloning the repo, you must create a `.env` file with the values `LIBRARY_ID` `LIBRARY_TYPE` `API_KEY`, `QDRANT_URL`, and `OLLAMA_URL` (if you want to use q&a feature) in the `/app` directory of the project. For more details, see `.env-template` file
 ### For personal libraries:
 The `LIBRARY_ID` can be found [here](https://www.zotero.org/settings/keys) if it is a personal library. 
 
